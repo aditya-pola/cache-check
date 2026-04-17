@@ -128,6 +128,52 @@ If yes to all three → audit is worth it. If no → caching won't help; recomme
 
 **What kills it:** Anything dynamic before the stable content — timestamps, user IDs, session tokens, request IDs. One byte of drift = full miss.
 
+## What you can and can't control
+
+### You control: what gets cached
+Place `cache_control` after the content you want cached. Everything from request start to that marker = cached prefix.
+
+```python
+system=[
+    {"type": "text", "text": STABLE_INSTRUCTIONS},  # ← cached
+    {"type": "text", "text": KNOWLEDGE_BASE, "cache_control": {"type": "ephemeral"}},  # ← cached, breakpoint here
+]
+messages=[
+    {"role": "user", "content": user_query}  # ← not cached (after breakpoint)
+]
+```
+
+### You control: TTL (two options)
+```python
+# Default: 5 minutes (refreshes on each hit)
+"cache_control": {"type": "ephemeral"}
+
+# Extended: 1 hour (requires beta header, refreshes on hit)
+"cache_control": {"type": "ephemeral", "ttl": "1h"}
+```
+No custom TTL beyond these. `claude -p` uses 1h automatically.
+
+### You DON'T control
+- **No cache clear API** — can't manually invalidate
+- **No cache inspection** — can't see what's cached, only hit/miss stats per call
+- **No cross-org sharing** — cache is isolated to your API key/workspace
+- **No partial updates** — change one byte before the breakpoint = entire cache miss
+
+### How to "clear" cache (workarounds)
+1. **Wait for TTL** — 5 min or 1 hour depending on setting
+2. **Change the bytes** — any modification before breakpoint invalidates (add a version comment if needed)
+3. **Switch models** — different model ID = different cache namespace
+
+### Cache lifecycle
+```
+Call 1: cache miss → writes prefix → cache_creation_input_tokens > 0
+Call 2 (within TTL, same bytes): cache hit → cache_read_input_tokens > 0
+Call 2 (bytes changed): cache miss → writes new entry
+Call 2 (TTL expired): cache miss → re-writes
+```
+
+Each hit refreshes the TTL (sliding window). A prefix that's hit every 4 minutes stays cached indefinitely.
+
 ## Core thesis (share this early, it frames everything)
 
 **Prompt caching is both a cost cut and a throughput multiplier.** Cache reads cost 0.1× the base input rate (90% off). And on every non-deprecated Claude model, `cache_read_input_tokens` do NOT count toward the ITPM (Input Tokens Per Minute) rate limit. At Tier 1 (30k ITPM on Sonnet), caching is often what saves you from 429s before it's what saves you money. Most content online treats caching as a cost topic and misses half the value.
