@@ -130,7 +130,7 @@ If yes to all three → audit is worth it. If no → caching won't help; recomme
 
 ## Core thesis (share this early, it frames everything)
 
-**Prompt caching is both a cost cut and a throughput multiplier.** Cache reads cost 0.1× the base input rate (90% off). And on every non-deprecated Claude model, `cache_read_input_tokens` do NOT count toward the ITPM rate limit. At Tier 1 (30k ITPM on Sonnet), caching is often what saves you from 429s before it's what saves you money. Most content online treats caching as a cost topic and misses half the value.
+**Prompt caching is both a cost cut and a throughput multiplier.** Cache reads cost 0.1× the base input rate (90% off). And on every non-deprecated Claude model, `cache_read_input_tokens` do NOT count toward the ITPM (Input Tokens Per Minute) rate limit. At Tier 1 (30k ITPM on Sonnet), caching is often what saves you from 429s before it's what saves you money. Most content online treats caching as a cost topic and misses half the value.
 
 ## Step 1 — detect the integration path
 
