@@ -233,6 +233,84 @@ Call after every `messages.create()`. Run twice, check second call shows cache r
 
 **Production:** Helicone (swap base_url, get dashboard) or OpenLLMetry (auto-instruments SDK, exports to OTel).
 
+## For `claude -p` users (Claude Code CLI)
+
+If the user runs Claude via `claude -p` rather than calling the API from their own code, caching works differently — it's automatic but there are ways to maximize it.
+
+### What's already happening
+
+- `claude -p` **auto-caches with 1-hour TTL** (no setup needed)
+- Claude Code's system prompt (~12k tokens) is cached and shared across all sessions
+- Each new `claude -p` call starts a fresh cache key for the user prompt
+- Subagents (via Task tool) use 5-minute TTL with Haiku
+
+### How to leverage it
+
+**1. Use `--resume` for multi-step work**
+```bash
+# First call — pays cache write cost
+claude -p "Analyze this codebase" --session-id $SID
+
+# Follow-up — cache hit on everything from first call
+claude -p "Now refactor the auth module" --resume $SID
+```
+Each resumed turn reads from cache instead of re-paying for the context.
+
+**2. Use `-c` to continue most recent session**
+```bash
+claude -p "Review this PR"
+# ... later, same directory ...
+claude -p "What about the error handling?" -c
+```
+`-c` continues the most recent session in the current directory.
+
+**3. Use `--fork-session` to branch without polluting history**
+```bash
+claude -p "Try approach A" --resume $SID --fork-session
+```
+Gets cache benefit from prior context but writes to a new session.
+
+**4. Use `--append-system-prompt` for stable context**
+```bash
+claude -p "Do X" --append-system-prompt "$(cat context.md)"
+```
+Content in system prompt caches better than content in `-p` argument.
+
+### How to check if it's working
+
+Session logs live at `~/.claude/projects/<cwd-slug>/<session-uuid>.jsonl`. Each turn has:
+```json
+"usage": {
+  "cache_read_input_tokens": 24000,
+  "cache_creation_input_tokens": 500,
+  "input_tokens": 12
+}
+```
+
+**Quick check:**
+```bash
+# Find your latest session
+ls -t ~/.claude/projects/$(pwd | tr '/' '-')/*.jsonl | head -1
+
+# Grep for cache stats
+grep cache_read ~/.claude/projects/.../<session>.jsonl
+```
+
+If `cache_read_input_tokens` grows across turns, caching is working.
+
+### Tips for max cache reuse
+
+1. **Keep prompts stable at the start** — variable content at the end
+2. **Same directory** — session lookup is by cwd
+3. **Don't exceed 1 hour between turns** — TTL expires, next turn re-pays
+4. **Avoid `--no-session-persistence`** — disables caching across turns
+
+### When this doesn't help
+
+- Single one-shot `claude -p` calls with no follow-up — you pay write cost but never read
+- Rapidly changing prompts — each change is a new cache key
+- Cross-machine work — sessions are local, can't resume from another machine
+
 ## When to recommend other tools instead of continuing this audit
 
 - Wants zero-config auto-injection → Autocache (montevive/autocache). Skill can't beat "don't touch my code."
