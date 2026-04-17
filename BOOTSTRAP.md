@@ -5,7 +5,7 @@ You've been asked to help with Claude API prompt caching. Follow these steps:
 ## Step 1: Fetch the skill
 
 Fetch the triage skill from:
-`https://raw.githubusercontent.com/<owner>/<repo>/main/skills/cache-check/SKILL.md`
+`https://raw.githubusercontent.com/aditya-pola/cache-check/main/skills/cache-check/SKILL.md`
 
 This contains the full audit methodology. Read it before proceeding.
 

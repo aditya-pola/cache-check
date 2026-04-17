@@ -5,7 +5,7 @@ Audit your Claude API usage for prompt-caching savings. Measure → diagnose →
 ## Use it — paste this to any Claude
 
 ```
-Fetch https://raw.githubusercontent.com/<owner>/<repo>/main/BOOTSTRAP.md
+Fetch https://raw.githubusercontent.com/aditya-pola/cache-check/main/BOOTSTRAP.md
 ```
 
 That's it. Claude will fetch the bootstrap, ask you qualifying questions, and run the right audit for your setup.
